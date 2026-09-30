@@ -113,9 +113,7 @@ public class clase4 extends clase3 {
                 if (tipo == PARQUE) { // Detecta una parcela de parque.
                     dibujarParque(x, z); // Añade árboles y un banco.
                 } else if (tipo != CALLE) { // Cualquier otro tipo es un edificio.
-                    float altura = alturaEdificio(tipo, fila, columna); // Recupera la misma altura calculada en clase1.
-                    float mitad = anchoEdificio(tipo) / 2; // Distancia del centro a cada fachada.
-                    dibujarVentanas(x, z, altura, mitad); // Coloca ventanas en sus cuatro fachadas.
+                    dibujarVentanas(tipo, fila, columna, x, z); // Coloca ventanas en sus cuatro fachadas.
                 }
                 if (tipo != CALLE) { // La señalización se coloca junto a las manzanas, no en celdas de calle.
                     dibujarPasoPeatonal(x, z); // Añade el cruce pintado sobre la calle contigua.
@@ -141,21 +139,74 @@ public class clase4 extends clase3 {
         caja(x, 1, z + 0.35f, 3, 0.7f, 0.15f, 0.55f, 0.30f, 0.13f); // Dibuja el respaldo detrás del asiento.
     }
 
-    /** Distribuye ventanas por pisos en las cuatro paredes del edificio. */
-    private void dibujarVentanas(float x, float z, float altura, float mitad) {
-        if (noche) { // Las ventanas simulan habitaciones encendidas en el ambiente nocturno.
-            entero("uEmision", 1); // Permite ver el color de las ventanas sin depender de farolas.
+    /**
+     * Distribuye ventanas por pisos en las cuatro paredes del edificio.
+     * De día todas muestran vidrio; de noche solo algunas se encienden, con el color de luz de su distrito.
+     */
+    private void dibujarVentanas(int tipo, int fila, int columna, float x, float z) {
+        float altura = alturaEdificio(tipo, fila, columna); // Recupera la misma altura calculada en clase1.
+        float fachadaX = anchoEdificio(tipo) / 2 + 0.01f; // Distancia a las fachadas este y oeste, separada de la pared.
+        float fachadaZ = profundidadEdificio(tipo) / 2 + 0.01f; // Distancia a las fachadas norte y sur.
+        float techoVentanas = altura; // Los pisos llegan hasta la cubierta.
+        if (tipo == INDUSTRIAL) { // Los galpones solo tienen ventanas en la planta baja.
+            techoVentanas = 2.5f;
         }
-        float fachada = mitad + 0.01f; // Separa la ventana de la pared para evitar parpadeo de profundidad.
-        for (float y = 1.7f; y < altura; y += 2) { // Recorre los pisos separados por dos unidades de altura.
-            for (float desplazamiento = -2; desplazamiento <= 2; desplazamiento += 2) { // Coloca tres ventanas por fachada.
-                caja(x + desplazamiento, y, z - fachada, 0.8f, 0.9f, 0.04f, 0.95f, 0.75f, 0.38f); // Ventana de la fachada norte.
-                caja(x + desplazamiento, y, z + fachada, 0.8f, 0.9f, 0.04f, 0.95f, 0.75f, 0.38f); // Ventana de la fachada sur.
-                caja(x - fachada, y, z + desplazamiento, 0.04f, 0.9f, 0.8f, 0.95f, 0.75f, 0.38f); // Ventana de la fachada oeste.
-                caja(x + fachada, y, z + desplazamiento, 0.04f, 0.9f, 0.8f, 0.95f, 0.75f, 0.38f); // Ventana de la fachada este.
+        int piso = 0; // Número de piso, usado para alternar colores y encendido.
+        for (float y = 1.7f; y < techoVentanas; y += 2) { // Recorre los pisos separados por dos unidades de altura.
+            int indice = 0; // Número de ventana dentro del piso.
+            for (float desplazamiento = -2; desplazamiento <= 2; desplazamiento += 2) { // Tres ventanas por fachada.
+                prepararVentana(tipo, fila, columna, piso, indice++);
+                caja(x + desplazamiento, y, z - fachadaZ, 0.8f, 0.9f, 0.04f, colorVentana[0], colorVentana[1], colorVentana[2]); // Norte.
+                prepararVentana(tipo, fila, columna, piso, indice++);
+                caja(x + desplazamiento, y, z + fachadaZ, 0.8f, 0.9f, 0.04f, colorVentana[0], colorVentana[1], colorVentana[2]); // Sur.
+                prepararVentana(tipo, fila, columna, piso, indice++);
+                caja(x - fachadaX, y, z + desplazamiento, 0.04f, 0.9f, 0.8f, colorVentana[0], colorVentana[1], colorVentana[2]); // Oeste.
+                prepararVentana(tipo, fila, columna, piso, indice++);
+                caja(x + fachadaX, y, z + desplazamiento, 0.04f, 0.9f, 0.8f, colorVentana[0], colorVentana[1], colorVentana[2]); // Este.
             }
+            piso++;
         }
         entero("uEmision", 0); // Restablece la iluminación normal de los demás elementos.
+    }
+
+    private final float[] colorVentana = new float[3]; // Color de la próxima ventana; se reutiliza para no crear arreglos.
+
+    /** Decide el color y la emisión de una ventana según el distrito, el piso y la hora del día. */
+    private void prepararVentana(int tipo, int fila, int columna, int piso, int indice) {
+        if (!noche) { // De día: vidrio gris azulado que recibe la luz del sol.
+            entero("uEmision", 0);
+            colorVentana[0] = 0.36f;
+            colorVentana[1] = 0.46f;
+            colorVentana[2] = 0.56f;
+            return;
+        }
+        boolean encendida = (fila * 7 + piso * 3 + columna * 5 + indice) % 4 != 0; // Patrón fijo: una de cada cuatro apagada.
+        if (!encendida) { // Ventana apagada: vidrio oscuro sin emisión.
+            entero("uEmision", 0);
+            colorVentana[0] = 0.08f;
+            colorVentana[1] = 0.09f;
+            colorVentana[2] = 0.11f;
+            return;
+        }
+        entero("uEmision", 1); // La ventana encendida se ve aunque no le llegue luz.
+        if (tipo == FINANCIERO) { // Oficinas: blanco frío.
+            colorVentana[0] = 0.80f;
+            colorVentana[1] = 0.90f;
+            colorVentana[2] = 1.00f;
+        } else if (tipo == COMERCIAL) { // Tiendas: neón magenta y cian alternados por piso.
+            boolean magenta = piso % 2 == 0;
+            colorVentana[0] = magenta ? 1.00f : 0.30f;
+            colorVentana[1] = magenta ? 0.30f : 0.90f;
+            colorVentana[2] = magenta ? 0.80f : 1.00f;
+        } else if (tipo == INDUSTRIAL) { // Galpones: naranja de lámpara de sodio.
+            colorVentana[0] = 1.00f;
+            colorVentana[1] = 0.55f;
+            colorVentana[2] = 0.15f;
+        } else { // Viviendas: amarillo cálido.
+            colorVentana[0] = 1.00f;
+            colorVentana[1] = 0.78f;
+            colorVentana[2] = 0.40f;
+        }
     }
 
     /** Dibuja las franjas blancas sobre la calle contigua al norte de la manzana. */

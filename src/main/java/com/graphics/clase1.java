@@ -260,9 +260,9 @@ public class clase1 {
         return 4 + v % 5; // Residencial: entre 4 y 8.
     }
 
-    /** Ancho (y profundidad) del edificio; los galpones ocupan más superficie. */
+    /** Ancho del edificio en X; los galpones son más largos. */
     protected static float anchoEdificio(int tipo) {
-        if (tipo == INDUSTRIAL) { // El galpón casi llena la acera.
+        if (tipo == INDUSTRIAL) { // El galpón ocupa casi todo el largo de la acera.
             return 8.4f;
         }
         if (tipo == FINANCIERO) { // La torre es un poco más esbelta.
@@ -271,10 +271,19 @@ public class clase1 {
         return 7; // Residencial y comercial conservan el ancho original.
     }
 
+    /** Profundidad del edificio en Z; el galpón es más angosto para dejar libres las esquinas de la acera. */
+    protected static float profundidadEdificio(int tipo) {
+        if (tipo == INDUSTRIAL) { // Deja espacio para farolas y semáforos en las esquinas norte.
+            return 6.4f;
+        }
+        return anchoEdificio(tipo); // Los demás edificios tienen planta cuadrada.
+    }
+
     /** Dibuja el cuerpo, la cubierta y el detalle característico de cada distrito. */
     protected void dibujarEdificio(int tipo, int fila, int columna, float x, float z) {
         float altura = alturaEdificio(tipo, fila, columna); // Altura del cuerpo principal.
-        float ancho = anchoEdificio(tipo); // Tamaño de la planta.
+        float ancho = anchoEdificio(tipo); // Tamaño de la planta en X.
+        float fondo = profundidadEdificio(tipo); // Tamaño de la planta en Z.
         int v = variacion(fila, columna); // Variación para alternar colores.
         float base = 0.3f; // El edificio se apoya sobre la acera.
         float r;
@@ -302,21 +311,21 @@ public class clase1 {
             g = terracota ? 0.40f : 0.78f;
             b = terracota ? 0.28f : 0.60f;
         }
-        caja(x, base + altura / 2, z, ancho, altura, ancho, r, g, b); // Cuerpo principal del edificio.
+        caja(x, base + altura / 2, z, ancho, altura, fondo, r, g, b); // Cuerpo principal del edificio.
         float techo = base + altura; // Altura de la cara superior del cuerpo.
 
         if (tipo == FINANCIERO) { // Torre: remate escalonado y antena.
-            caja(x, techo + 0.6f, z, ancho * 0.7f, 1.2f, ancho * 0.7f, 0.22f, 0.26f, 0.32f); // Sala de máquinas.
+            caja(x, techo + 0.6f, z, ancho * 0.7f, 1.2f, fondo * 0.7f, 0.22f, 0.26f, 0.32f); // Sala de máquinas.
             caja(x, techo + 3.2f, z, 0.15f, 4, 0.15f, 0.75f, 0.75f, 0.78f); // Antena.
         } else if (tipo == INDUSTRIAL) { // Galpón: techo plano oscuro y chimenea.
-            caja(x, techo + 0.15f, z, ancho + 0.2f, 0.3f, ancho + 0.2f, 0.30f, 0.30f, 0.30f); // Techo.
-            caja(x + 2.6f, techo + 2.5f, z + 2.6f, 0.9f, 5, 0.9f, 0.40f, 0.22f, 0.18f); // Chimenea de ladrillo.
+            caja(x, techo + 0.15f, z, ancho + 0.2f, 0.3f, fondo + 0.2f, 0.30f, 0.30f, 0.30f); // Techo.
+            caja(x + 2.6f, techo + 2.5f, z + 1.8f, 0.9f, 5, 0.9f, 0.40f, 0.22f, 0.18f); // Chimenea de ladrillo.
         } else { // Residencial y comercial: cornisa más ancha, como el edificio original.
-            caja(x, techo + 0.15f, z, ancho + 0.3f, 0.3f, ancho + 0.3f, 0.20f, 0.26f, 0.32f); // Cubierta.
+            caja(x, techo + 0.15f, z, ancho + 0.3f, 0.3f, fondo + 0.3f, 0.20f, 0.26f, 0.32f); // Cubierta.
         }
 
         if (tipo == COMERCIAL) { // Toldo sobre la acera en la fachada sur (hacia +Z).
-            caja(x, base + 2.3f, z + ancho / 2 + 0.6f, ancho - 1, 0.12f, 1.2f, 0.90f, 0.90f, 0.86f);
+            caja(x, base + 2.3f, z + fondo / 2 + 0.6f, ancho - 1, 0.12f, 1.2f, 0.90f, 0.90f, 0.86f);
         }
     }
 
