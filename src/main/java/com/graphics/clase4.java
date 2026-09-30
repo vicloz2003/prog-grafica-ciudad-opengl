@@ -15,10 +15,12 @@ public class clase4 extends clase3 {
     private boolean mostrarMapa = true; // Muestra el minimapa desde el inicio.
     private int entregas = 0; // Cuenta las entregas completadas; también identifica el siguiente destino.
     private float tiempo = 0; // Acumula los segundos de la partida hasta completar el recorrido.
-    private static final float[][] DESTINOS = { // Cada fila contiene X y Z de una parada sobre la calle.
-        {30, -30}, // Primera entrega: esquina noreste.
-        {-30, -30}, // Segunda entrega: esquina noroeste.
-        {-30, 30} // Tercera entrega: regreso al punto inicial.
+    protected float reloj = 0; // Reloj que nunca se detiene; anima semáforos y otros detalles.
+    protected static final float[][] DESTINOS = { // Cada fila contiene X y Z de una parada sobre la calle.
+        {-40, -30}, // Primera entrega: distrito comercial (noroeste).
+        {40, -50}, // Segunda entrega: distrito financiero (noreste).
+        {30, 40}, // Tercera entrega: distrito industrial (sureste).
+        {-20, 50} // Cuarta entrega: regreso al distrito residencial (suroeste).
     };
 
     // ==================== 2. CONTROLES Y REINICIO ====================
@@ -46,6 +48,7 @@ public class clase4 extends clase3 {
     @Override // Añade el objetivo del juego al movimiento heredado.
     protected void actualizar(float deltaTime) {
         super.actualizar(deltaTime); // Procesa aceleración, giro, colisiones y título de la ventana.
+        reloj += deltaTime; // Avanza siempre, también después de ganar.
         if (entregas >= DESTINOS.length) { // Comprueba si ya se completaron todas las paradas.
             return; // Conserva el tiempo final y evita leer fuera del arreglo.
         }
@@ -65,10 +68,10 @@ public class clase4 extends clase3 {
     protected String estadoExtra() {
         String mensaje = super.estadoExtra(); // Recupera los indicadores de iluminación.
         mensaje += " | M: mapa | "; // Muestra la tecla que alterna el minimapa.
-        if (entregas == DESTINOS.length) { // Selecciona el texto de victoria al completar las tres paradas.
+        if (entregas == DESTINOS.length) { // Selecciona el texto de victoria al completar todas las paradas.
             mensaje += "GANASTE en " + (int) tiempo + " s! R: jugar otra vez"; // Muestra tiempo final y opción de reinicio.
         } else { // Durante el recorrido muestra progreso e instrucciones.
-            mensaje += "Entregas " + entregas + "/3"; // Indica cuántas paradas se completaron.
+            mensaje += "Entregas " + entregas + "/" + DESTINOS.length; // Indica cuántas paradas se completaron.
             mensaje += " | Frena en la marca dorada | " + (int) tiempo + " s"; // Explica la condición de entrega y el tiempo.
         }
         return mensaje; // Entrega el texto a actualizarTitulo() de clase2.
@@ -93,8 +96,10 @@ public class clase4 extends clase3 {
         float x = DESTINOS[entregas][0]; // Lee el X de la próxima entrega.
         float z = DESTINOS[entregas][1]; // Lee el Z de la próxima entrega.
         entero("uEmision", 1); // Hace que el objetivo sea visible incluso de noche.
-        caja(x, 0.06f, z, 5, 0.08f, 5, 1, 0.72f, 0.12f); // Dibuja una marca dorada sobre el asfalto.
-        if (!vistaMapa) { // Evita añadir una baliza tridimensional al mapa pequeño.
+        if (vistaMapa) { // En el minimapa la marca va por encima de las torres (antenas ~36) y es más grande.
+            caja(x, 38, z, 7, 0.1f, 7, 1, 0.72f, 0.12f); // Marca dorada visible desde arriba.
+        } else {
+            caja(x, 0.06f, z, 5, 0.08f, 5, 1, 0.72f, 0.12f); // Dibuja una marca dorada sobre el asfalto.
             float alturaBaliza = 3.5f + (float) Math.sin(tiempo * 2) * 0.3f; // Hace oscilar la baliza suavemente.
             cajaGirada(x, alturaBaliza, z, 0.8f, 0.8f, 0.8f, 1, 0.8f, 0.15f, tiempo); // Dibuja el cubo giratorio del objetivo.
         }
@@ -220,7 +225,7 @@ public class clase4 extends clase3 {
     private void dibujarSemaforo(float x, float z) {
         caja(x, 1.7f, z, 0.18f, 2.8f, 0.18f, 0.18f, 0.20f, 0.22f); // Dibuja el poste sobre la acera.
         caja(x, 3.1f, z, 0.55f, 1.2f, 0.45f, 0.08f, 0.10f, 0.12f); // Dibuja la carcasa de las tres luces.
-        int fase = (int) (tiempo % 12); // Repite un ciclo de segundos comprendidos entre 0 y 11.
+        int fase = (int) (reloj % 12); // Repite un ciclo de segundos comprendidos entre 0 y 11.
         for (int indice = 0; indice < 3; indice++) { // Recorre rojo arriba, amarillo al centro y verde abajo.
             boolean encendida = false; // Parte de una bombilla apagada.
             if (indice == 0) { // Selecciona la bombilla roja.
@@ -290,12 +295,12 @@ public class clase4 extends clase3 {
 
     /** Dibuja una marca cian y una punta blanca por encima de los edificios del minimapa. */
     private void dibujarIndicadorAuto() {
-        cajaGirada(autoX, 25, autoZ, 2.2f, 0.1f, 3.2f, 0.1f, 1, 1, angulo); // Marca la posición con un rectángulo cian orientado.
+        cajaGirada(autoX, 40, autoZ, 2.2f, 0.1f, 3.2f, 0.1f, 1, 1, angulo); // Marca la posición con un rectángulo cian orientado.
         float frenteX = -(float) Math.sin(angulo); // Calcula la dirección frontal en el eje X.
         float frenteZ = -(float) Math.cos(angulo); // Calcula la dirección frontal en el eje Z.
         float puntaX = autoX + frenteX * 2; // Desplaza la punta dos unidades hacia delante en X.
         float puntaZ = autoZ + frenteZ * 2; // Desplaza la punta dos unidades hacia delante en Z.
-        caja(puntaX, 26, puntaZ, 0.9f, 0.1f, 0.9f, 1, 1, 1); // Dibuja la punta blanca encima del indicador cian.
+        caja(puntaX, 41, puntaZ, 0.9f, 0.1f, 0.9f, 1, 1, 1); // Dibuja la punta blanca encima del indicador cian.
     }
 
     /** Punto de entrada del proyecto final. */
