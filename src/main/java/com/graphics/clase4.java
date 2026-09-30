@@ -295,12 +295,12 @@ public class clase4 extends clase3 {
 
     /** Dibuja una marca cian y una punta blanca por encima de los edificios del minimapa. */
     private void dibujarIndicadorAuto() {
-        cajaGirada(autoX, 40, autoZ, 2.2f, 0.1f, 3.2f, 0.1f, 1, 1, angulo); // Marca la posición con un rectángulo cian orientado.
+        cajaGirada(autoX, 40, autoZ, 4, 0.1f, 5.6f, 0.1f, 1, 1, angulo); // Marca la posición con un rectángulo cian orientado.
         float frenteX = -(float) Math.sin(angulo); // Calcula la dirección frontal en el eje X.
         float frenteZ = -(float) Math.cos(angulo); // Calcula la dirección frontal en el eje Z.
-        float puntaX = autoX + frenteX * 2; // Desplaza la punta dos unidades hacia delante en X.
-        float puntaZ = autoZ + frenteZ * 2; // Desplaza la punta dos unidades hacia delante en Z.
-        caja(puntaX, 41, puntaZ, 0.9f, 0.1f, 0.9f, 1, 1, 1); // Dibuja la punta blanca encima del indicador cian.
+        float puntaX = autoX + frenteX * 3.5f; // Desplaza la punta 3.5 unidades hacia delante en X.
+        float puntaZ = autoZ + frenteZ * 3.5f; // Desplaza la punta 3.5 unidades hacia delante en Z.
+        caja(puntaX, 41, puntaZ, 1.6f, 0.1f, 1.6f, 1, 1, 1); // Dibuja la punta blanca encima del indicador cian.
     }
 
     /** Punto de entrada del proyecto final. */
