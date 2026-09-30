@@ -26,19 +26,41 @@ public class clase1 {
     protected int alto = 760; // Alto inicial de la ventana; después contiene píxeles del framebuffer.
     protected float orbita = 0.6f; // Ángulo inicial de la cámara alrededor de la ciudad, en radianes.
     protected boolean vistaMapa = false; // Clase4 lo activa cuando dibuja la vista superior.
-    protected static final float LIMITE = 35; // Distancia del origen a cada borde: el mapa mide 70 unidades.
-    protected static final float CELDA = 10; // Ancho y profundidad de cada celda del mapa.
     private final Map<String, Integer> uniforms = new HashMap<>(); // Evita buscar repetidamente el mismo uniform.
 
-    protected static final int[][] MAPA = { // Matriz: 0 = calle, 1 = edificio, 2 = parque.
-        {0, 0, 0, 0, 0, 0, 0}, // Fila norte: calle continua.
-        {0, 1, 0, 1, 0, 2, 0}, // Primera fila de manzanas, separadas por calles.
-        {0, 0, 0, 0, 0, 0, 0}, // Segunda avenida horizontal.
-        {0, 2, 0, 1, 0, 1, 0}, // Fila central de manzanas.
-        {0, 0, 0, 0, 0, 0, 0}, // Tercera avenida horizontal.
-        {0, 1, 0, 2, 0, 1, 0}, // Última fila de manzanas.
-        {0, 0, 0, 0, 0, 0, 0} // Calle del borde sur.
+    // Tipos de celda que puede contener el mapa.
+    protected static final int CALLE = 0; // Celda transitable.
+    protected static final int RESIDENCIAL = 1; // Edificio bajo de viviendas (distrito suroeste).
+    protected static final int PARQUE = 2; // Parcela verde con árboles y banco.
+    protected static final int FINANCIERO = 3; // Rascacielos de oficinas (distrito noreste).
+    protected static final int COMERCIAL = 4; // Edificio mediano con tiendas (distrito noroeste).
+    protected static final int INDUSTRIAL = 5; // Galpón con chimenea (distrito sureste).
+
+    /*
+     * Ciudad de 13 x 13 celdas. Filas y columnas pares son calles continuas;
+     * las impares son manzanas. La fila 6 y la columna 6 forman las avenidas
+     * centrales que dividen la ciudad en cuatro distritos:
+     *   NO = comercial (4)   NE = financiero (3)
+     *   SO = residencial (1) SE = industrial (5)     2 = parque
+     * Las filas corresponden a Z (norte arriba = -Z) y las columnas a X.
+     */
+    protected static final int[][] MAPA = {
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // Calle del borde norte.
+        {0, 4, 0, 4, 0, 2, 0, 3, 0, 3, 0, 3, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 4, 0, 2, 0, 4, 0, 3, 0, 2, 0, 3, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 4, 0, 4, 0, 4, 0, 3, 0, 3, 0, 3, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // Avenida central este-oeste.
+        {0, 1, 0, 1, 0, 2, 0, 5, 0, 5, 0, 5, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 2, 0, 1, 0, 1, 0, 5, 0, 2, 0, 5, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 1, 0, 1, 0, 1, 0, 5, 0, 5, 0, 5, 0},
+        {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} // Calle del borde sur.
     };
+    protected static final float CELDA = 10; // Ancho y profundidad de cada celda (igual que en el mapa original).
+    protected static final float LIMITE = MAPA.length * CELDA / 2; // Distancia del origen a cada borde: 65 unidades.
 
     // ==================== 2. INICIO, CICLO Y LIMPIEZA ====================
 
@@ -155,9 +177,11 @@ public class clase1 {
 
     /** Coloca la cámara elevada y orientada hacia el centro de la ciudad. */
     protected void configurarCamara() {
-        float camaraX = (float) Math.sin(orbita) * 65; // Calcula la posición X de una órbita de radio 65.
-        float camaraZ = (float) Math.cos(orbita) * 65; // Calcula la posición Z de esa misma órbita.
-        vector("uOjo", camaraX, 55, camaraZ); // Envía la posición de la cámara a 55 unidades de altura.
+        float radio = LIMITE * 1.85f; // La órbita crece con el tamaño del mapa para verlo completo.
+        float altura = LIMITE * 1.55f; // La altura también depende del mapa.
+        float camaraX = (float) Math.sin(orbita) * radio; // Calcula la posición X de la órbita.
+        float camaraZ = (float) Math.cos(orbita) * radio; // Calcula la posición Z de esa misma órbita.
+        vector("uOjo", camaraX, altura, camaraZ); // Envía la posición elevada de la cámara.
         vector("uObjetivo", 0, 0, 0); // Apunta la cámara hacia el origen del mundo.
         decimal("uAspecto", (float) ancho / alto); // Envía la proporción de la imagen para evitar deformaciones.
     }
@@ -182,6 +206,7 @@ public class clase1 {
         glUseProgram(programa); // Activa los shaders de esta etapa.
         glBindVertexArray(vao); // Selecciona los atributos del cubo compartido.
         entero("uMapa", 0); // Selecciona perspectiva normal, no la proyección del minimapa.
+        decimal("uMedioMapa", LIMITE + 2); // Mitad del área que abarca el minimapa, con un pequeño margen.
         configurarCamara(); // Actualiza la posición y el objetivo de la cámara.
         prepararLuces(); // Envía iluminación si la etapa actual la implementa.
         escena(); // Dibuja la ciudad y las ampliaciones de la lección actual.
@@ -192,27 +217,106 @@ public class clase1 {
 
     /** Recorre el mapa y transforma cada celda en geometría. */
     protected void escena() {
-        caja(0, -0.25f, 0, 70, 0.5f, 70, 0.16f, 0.19f, 0.23f); // Dibuja la base de asfalto con su cara superior en Y=0.
+        float lado = 2 * LIMITE; // El suelo cubre todo el mapa ampliado.
+        caja(0, -0.25f, 0, lado, 0.5f, lado, 0.16f, 0.19f, 0.23f); // Dibuja la base de asfalto con su cara superior en Y=0.
         for (int fila = 0; fila < MAPA.length; fila++) { // Recorre el mapa de norte a sur.
             for (int columna = 0; columna < MAPA[fila].length; columna++) { // Recorre cada fila de izquierda a derecha.
                 float x = centro(columna); // Convierte la columna a posición X.
                 float z = centro(fila); // Convierte la fila a posición Z.
-                int tipo = MAPA[fila][columna]; // Lee si la celda es calle, edificio o parque.
-                if (tipo == 0) { // Selecciona las celdas transitables.
+                int tipo = MAPA[fila][columna]; // Lee el tipo de celda.
+                if (tipo == CALLE) { // Selecciona las celdas transitables.
                     dibujarMarcasCalle(fila, columna, x, z); // Añade líneas amarillas entre intersecciones.
                 } else { // Las demás celdas representan manzanas completas.
                     caja(x, 0.15f, z, 10, 0.3f, 10, 0.60f, 0.64f, 0.66f); // Dibuja la acera elevada sobre el asfalto.
-                    if (tipo == 1) { // Selecciona una manzana ocupada por un edificio.
-                        float altura = 5 + (fila * 3 + columna * 7) % 9; // Varía la altura de forma reproducible entre 5 y 13.
-                        float rojo = 0.28f + columna * 0.045f; // Varía el tono rojo según la columna.
-                        float azul = 0.48f + fila * 0.025f; // Varía el tono azul según la fila.
-                        caja(x, altura / 2 + 0.3f, z, 7, altura, 7, rojo, 0.40f, azul); // Coloca la base del edificio sobre la acera.
-                        caja(x, altura + 0.45f, z, 7.3f, 0.3f, 7.3f, 0.20f, 0.26f, 0.32f); // Añade una cubierta más ancha y oscura.
-                    } else { // El tipo 2 representa un parque.
+                    if (tipo == PARQUE) { // Un parque solo lleva césped; clase4 añade árboles y banco.
                         caja(x, 0.32f, z, 9, 0.1f, 9, 0.20f, 0.45f, 0.28f); // Cubre la parcela con césped verde.
+                    } else { // Cualquier otro tipo es un edificio de algún distrito.
+                        dibujarEdificio(tipo, fila, columna, x, z); // Construye el edificio según su distrito.
                     }
                 }
             }
+        }
+    }
+
+    // ==================== 4b. EDIFICIOS POR DISTRITO ====================
+
+    /** Número reproducible entre 0 y 8 que varía de una manzana a otra. */
+    protected static int variacion(int fila, int columna) {
+        return (fila * 3 + columna * 7) % 9; // Misma fórmula del mapa original.
+    }
+
+    /** Altura del cuerpo del edificio según su distrito. */
+    protected static float alturaEdificio(int tipo, int fila, int columna) {
+        int v = variacion(fila, columna); // Obtiene la variación de esta manzana.
+        if (tipo == FINANCIERO) { // Rascacielos: entre 18 y 30.
+            return 18 + (v * 3 + fila) % 13;
+        }
+        if (tipo == COMERCIAL) { // Edificios medianos: entre 6 y 12.
+            return 6 + (v * 5) % 7;
+        }
+        if (tipo == INDUSTRIAL) { // Galpones bajos: entre 3 y 5.
+            return 3 + v % 3;
+        }
+        return 4 + v % 5; // Residencial: entre 4 y 8.
+    }
+
+    /** Ancho (y profundidad) del edificio; los galpones ocupan más superficie. */
+    protected static float anchoEdificio(int tipo) {
+        if (tipo == INDUSTRIAL) { // El galpón casi llena la acera.
+            return 8.4f;
+        }
+        if (tipo == FINANCIERO) { // La torre es un poco más esbelta.
+            return 6.6f;
+        }
+        return 7; // Residencial y comercial conservan el ancho original.
+    }
+
+    /** Dibuja el cuerpo, la cubierta y el detalle característico de cada distrito. */
+    protected void dibujarEdificio(int tipo, int fila, int columna, float x, float z) {
+        float altura = alturaEdificio(tipo, fila, columna); // Altura del cuerpo principal.
+        float ancho = anchoEdificio(tipo); // Tamaño de la planta.
+        int v = variacion(fila, columna); // Variación para alternar colores.
+        float base = 0.3f; // El edificio se apoya sobre la acera.
+        float r;
+        float g;
+        float b;
+        if (tipo == FINANCIERO) { // Vidrio azul acero o gris claro.
+            boolean azul = v % 2 == 0;
+            r = azul ? 0.30f : 0.52f;
+            g = azul ? 0.44f : 0.56f;
+            b = azul ? 0.60f : 0.62f;
+        } else if (tipo == COMERCIAL) { // Paleta de colores vivos.
+            float[][] paleta = {{0.82f, 0.30f, 0.28f}, {0.93f, 0.63f, 0.20f}, {0.28f, 0.58f, 0.84f}, {0.55f, 0.36f, 0.74f}};
+            float[] color = paleta[v % paleta.length];
+            r = color[0];
+            g = color[1];
+            b = color[2];
+        } else if (tipo == INDUSTRIAL) { // Gris de hormigón u óxido.
+            boolean oxido = v % 2 == 1;
+            r = oxido ? 0.55f : 0.47f;
+            g = oxido ? 0.36f : 0.47f;
+            b = oxido ? 0.26f : 0.45f;
+        } else { // Residencial: terracota o crema.
+            boolean terracota = v % 2 == 0;
+            r = terracota ? 0.72f : 0.86f;
+            g = terracota ? 0.40f : 0.78f;
+            b = terracota ? 0.28f : 0.60f;
+        }
+        caja(x, base + altura / 2, z, ancho, altura, ancho, r, g, b); // Cuerpo principal del edificio.
+        float techo = base + altura; // Altura de la cara superior del cuerpo.
+
+        if (tipo == FINANCIERO) { // Torre: remate escalonado y antena.
+            caja(x, techo + 0.6f, z, ancho * 0.7f, 1.2f, ancho * 0.7f, 0.22f, 0.26f, 0.32f); // Sala de máquinas.
+            caja(x, techo + 3.2f, z, 0.15f, 4, 0.15f, 0.75f, 0.75f, 0.78f); // Antena.
+        } else if (tipo == INDUSTRIAL) { // Galpón: techo plano oscuro y chimenea.
+            caja(x, techo + 0.15f, z, ancho + 0.2f, 0.3f, ancho + 0.2f, 0.30f, 0.30f, 0.30f); // Techo.
+            caja(x + 2.6f, techo + 2.5f, z + 2.6f, 0.9f, 5, 0.9f, 0.40f, 0.22f, 0.18f); // Chimenea de ladrillo.
+        } else { // Residencial y comercial: cornisa más ancha, como el edificio original.
+            caja(x, techo + 0.15f, z, ancho + 0.3f, 0.3f, ancho + 0.3f, 0.20f, 0.26f, 0.32f); // Cubierta.
+        }
+
+        if (tipo == COMERCIAL) { // Toldo sobre la acera en la fachada sur (hacia +Z).
+            caja(x, base + 2.3f, z + ancho / 2 + 0.6f, ancho - 1, 0.12f, 1.2f, 0.90f, 0.90f, 0.86f);
         }
     }
 
@@ -276,50 +380,51 @@ public class clase1 {
     private String vertexShader() {
         return """
             #version 330 core // Selecciona GLSL 3.30 para el contexto OpenGL 3.3.
-            layout (location = 0) in vec3 aPos; // Lee la posición local del vértice desde el VBO.
+            layout (location = 0) in vec3 aPos; // Lee la posicion local del vertice desde el VBO.
             layout (location = 1) in vec3 aNormal; // Lee la normal de la cara desde el mismo VBO.
             uniform vec3 uPos; // Recibe el centro de la caja en la ciudad.
-            uniform vec3 uEscala; // Recibe el tamaño de la caja en cada eje.
-            uniform vec3 uOjo; // Recibe la posición de la cámara.
-            uniform vec3 uObjetivo; // Recibe el punto que observa la cámara.
+            uniform vec3 uEscala; // Recibe el tamano de la caja en cada eje.
+            uniform vec3 uOjo; // Recibe la posicion de la camara.
+            uniform vec3 uObjetivo; // Recibe el punto que observa la camara.
             uniform float uGiro; // Recibe el giro del objeto alrededor de Y.
-            uniform float uAspecto; // Recibe la relación ancho/alto de la imagen.
-            uniform int uMapa; // Selecciona perspectiva (0) o vista superior ortográfica (1).
-            out vec3 vMundo; // Envía la posición mundial al shader de fragmentos.
-            out vec3 vNormal; // Envía la normal transformada para la iluminación de clase3.
+            uniform float uAspecto; // Recibe la relacion ancho/alto de la imagen.
+            uniform int uMapa; // Selecciona perspectiva (0) o vista superior ortografica (1).
+            uniform float uMedioMapa; // Mitad del lado del mundo que cabe en el minimapa.
+            out vec3 vMundo; // Envia la posicion mundial al shader de fragmentos.
+            out vec3 vNormal; // Envia la normal transformada para la iluminacion de clase3.
 
-            void main() { // OpenGL ejecuta este bloque una vez por vértice.
+            void main() { // OpenGL ejecuta este bloque una vez por vertice.
                 float coseno = cos(uGiro); // Calcula el coseno del giro del objeto.
                 float seno = sin(uGiro); // Calcula el seno del mismo giro.
-                mat3 giro = mat3( // Construye la matriz de rotación; GLSL recibe sus columnas.
-                    coseno, 0.0, -seno, // Primera columna: dirección del eje X rotado.
+                mat3 giro = mat3( // Construye la matriz de rotacion; GLSL recibe sus columnas.
+                    coseno, 0.0, -seno, // Primera columna: direccion del eje X rotado.
                     0.0, 1.0, 0.0, // Segunda columna: Y permanece vertical.
-                    seno, 0.0, coseno // Tercera columna: dirección del eje Z rotado.
+                    seno, 0.0, coseno // Tercera columna: direccion del eje Z rotado.
                 ); // Completa la matriz de tres filas y tres columnas.
-                vMundo = giro * (aPos * uEscala) + uPos; // Escala, gira y traslada el vértice al mundo.
+                vMundo = giro * (aPos * uEscala) + uPos; // Escala, gira y traslada el vertice al mundo.
                 vNormal = normalize(giro * (aNormal / uEscala)); // Corrige la normal con la inversa transpuesta de escala y giro.
 
                 if (uMapa == 1) { // Esta rama se usa al dibujar el minimapa en clase4.
-                    float pantallaX = vMundo.x / 37.0; // Ajusta el ancho del mundo al intervalo visible -1 a 1.
-                    float pantallaY = -vMundo.z / 37.0; // Coloca el norte (-Z) en la parte superior del mapa.
-                    float profundidad = -vMundo.y / 100.0; // Hace que los objetos más altos se vean por encima.
+                    float pantallaX = vMundo.x / uMedioMapa; // Ajusta el ancho del mundo al intervalo visible -1 a 1.
+                    float pantallaY = -vMundo.z / uMedioMapa; // Coloca el norte (-Z) en la parte superior del mapa.
+                    float profundidad = -vMundo.y / 100.0; // Hace que los objetos mas altos se vean por encima.
                     gl_Position = vec4(pantallaX, pantallaY, profundidad, 1.0); // Proyecta sin reducir objetos lejanos.
-                } else { // La escena principal utiliza una cámara con perspectiva.
-                    vec3 frente = normalize(uObjetivo - uOjo); // Calcula la dirección hacia la que mira la cámara.
-                    vec3 derecha = normalize(cross(frente, vec3(0.0, 1.0, 0.0))); // Obtiene el eje horizontal de la cámara.
+                } else { // La escena principal utiliza una camara con perspectiva.
+                    vec3 frente = normalize(uObjetivo - uOjo); // Calcula la direccion hacia la que mira la camara.
+                    vec3 derecha = normalize(cross(frente, vec3(0.0, 1.0, 0.0))); // Obtiene el eje horizontal de la camara.
                     vec3 arriba = cross(derecha, frente); // Obtiene el eje vertical perpendicular a los otros dos.
-                    vec3 diferencia = vMundo - uOjo; // Traslada el origen del mundo hasta la cámara.
-                    float vistaX = dot(diferencia, derecha); // Mide cuánto está el vértice a la derecha de la cámara.
-                    float vistaY = dot(diferencia, arriba); // Mide cuánto está el vértice encima de la cámara.
-                    float vistaZ = -dot(diferencia, frente); // Usa Z negativa delante de la cámara, como espera OpenGL.
+                    vec3 diferencia = vMundo - uOjo; // Traslada el origen del mundo hasta la camara.
+                    float vistaX = dot(diferencia, derecha); // Mide cuanto esta el vertice a la derecha de la camara.
+                    float vistaY = dot(diferencia, arriba); // Mide cuanto esta el vertice encima de la camara.
+                    float vistaZ = -dot(diferencia, frente); // Usa Z negativa delante de la camara, como espera OpenGL.
                     float factor = 1.0 / tan(radians(55.0) * 0.5); // Convierte el campo visual de 55 grados en escala de perspectiva.
-                    float cerca = 0.1; // Define la distancia mínima visible.
-                    float lejos = 250.0; // Define la distancia máxima visible.
-                    float clipX = vistaX * factor / uAspecto; // Corrige la coordenada horizontal según el ancho de la pantalla.
+                    float cerca = 0.1; // Define la distancia minima visible.
+                    float lejos = 320.0; // Define la distancia maxima visible; cubre la ciudad ampliada.
+                    float clipX = vistaX * factor / uAspecto; // Corrige la coordenada horizontal segun el ancho de la pantalla.
                     float clipY = vistaY * factor; // Aplica el campo visual a la coordenada vertical.
-                    float clipZ = (lejos + cerca) / (cerca - lejos) * vistaZ; // Calcula el término de profundidad dependiente de Z.
-                    clipZ += 2.0 * lejos * cerca / (cerca - lejos); // Añade el término constante de profundidad.
-                    gl_Position = vec4(clipX, clipY, clipZ, -vistaZ); // OpenGL dividirá XYZ por W para producir perspectiva.
+                    float clipZ = (lejos + cerca) / (cerca - lejos) * vistaZ; // Calcula el termino de profundidad dependiente de Z.
+                    clipZ += 2.0 * lejos * cerca / (cerca - lejos); // Anade el termino constante de profundidad.
+                    gl_Position = vec4(clipX, clipY, clipZ, -vistaZ); // OpenGL dividira XYZ por W para producir perspectiva.
                 }
             }
             """; // Termina la cadena que contiene el shader de vértices.
@@ -328,10 +433,10 @@ public class clase1 {
     /** Define el color plano inicial; clase3 reemplaza este shader por la iluminación. */
     protected String fragmentShader() {
         return """
-            #version 330 core // Indica la versión del lenguaje del shader.
+            #version 330 core // Indica la version del lenguaje del shader.
             uniform vec3 uColor; // Recibe el color RGB enviado por cajaGirada().
             out vec4 color; // Define el color final que se escribe en la imagen.
-            void main() { // Se ejecuta para cada fragmento de la geometría dibujada.
+            void main() { // Se ejecuta para cada fragmento de la geometria dibujada.
                 color = vec4(uColor, 1.0); // Copia el material y establece opacidad completa.
             }
             """; // Termina la cadena del shader de fragmentos.

@@ -10,8 +10,10 @@ import static org.lwjgl.glfw.GLFW.*; // Permite consultar teclas y cambiar el t�
 public class clase2 extends clase1 {
 
     // ==================== 1. VARIABLES DEL AUTO ====================
-    protected float autoX = -30; // Posici처n horizontal inicial: centro de una calle.
-    protected float autoZ = 30; // Posici처n inicial sobre el eje que recorre el fondo de la ciudad.
+    protected static final float INICIO_X = centro(0); // Salida en la calle del borde oeste.
+    protected static final float INICIO_Z = centro(MAPA.length - 1); // Salida en la calle del borde sur.
+    protected float autoX = INICIO_X; // Posici처n horizontal inicial: esquina suroeste.
+    protected float autoZ = INICIO_Z; // Posici처n inicial en profundidad.
     protected float angulo = 0; // Orientaci처n en radianes; cero apunta hacia -Z.
     protected float velocidad = 0; // Unidades por segundo; un valor negativo significa reversa.
     protected boolean camaraAerea = false; // false: seguir el auto; true: observar toda la ciudad.
@@ -35,8 +37,8 @@ public class clase2 extends clase1 {
 
     /** Coloca nuevamente el auto en su punto de partida. */
     protected void reiniciar() {
-        autoX = -30; // Recupera la coordenada X de inicio.
-        autoZ = 30; // Recupera la coordenada Z de inicio.
+        autoX = INICIO_X; // Recupera la coordenada X de inicio.
+        autoZ = INICIO_Z; // Recupera la coordenada Z de inicio.
         angulo = 0; // Orienta el frente hacia -Z.
         velocidad = 0; // Detiene cualquier movimiento previo.
     }

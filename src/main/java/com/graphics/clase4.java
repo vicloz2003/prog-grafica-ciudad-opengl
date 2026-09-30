@@ -110,14 +110,14 @@ public class clase4 extends clase3 {
                 float x = centro(columna); // Obtiene el centro horizontal de la parcela.
                 float z = centro(fila); // Obtiene el centro de la parcela en profundidad.
                 int tipo = MAPA[fila][columna]; // Lee el contenido de la celda.
-                if (tipo == 2) { // Detecta una parcela de parque.
+                if (tipo == PARQUE) { // Detecta una parcela de parque.
                     dibujarParque(x, z); // Añade árboles y un banco.
+                } else if (tipo != CALLE) { // Cualquier otro tipo es un edificio.
+                    float altura = alturaEdificio(tipo, fila, columna); // Recupera la misma altura calculada en clase1.
+                    float mitad = anchoEdificio(tipo) / 2; // Distancia del centro a cada fachada.
+                    dibujarVentanas(x, z, altura, mitad); // Coloca ventanas en sus cuatro fachadas.
                 }
-                if (tipo == 1) { // Detecta una parcela con edificio.
-                    float altura = 5 + (fila * 3 + columna * 7) % 9; // Recupera la misma altura calculada en clase1.
-                    dibujarVentanas(x, z, altura); // Coloca ventanas en sus cuatro fachadas.
-                }
-                if (tipo != 0) { // La señalización se coloca junto a las manzanas, no en celdas de calle.
+                if (tipo != CALLE) { // La señalización se coloca junto a las manzanas, no en celdas de calle.
                     dibujarPasoPeatonal(x, z); // Añade el cruce pintado sobre la calle contigua.
                     dibujarSemaforo(x + 4, z - 4); // Coloca el semáforo dentro de la acera.
                 }
@@ -142,16 +142,17 @@ public class clase4 extends clase3 {
     }
 
     /** Distribuye ventanas por pisos en las cuatro paredes del edificio. */
-    private void dibujarVentanas(float x, float z, float altura) {
+    private void dibujarVentanas(float x, float z, float altura, float mitad) {
         if (noche) { // Las ventanas simulan habitaciones encendidas en el ambiente nocturno.
             entero("uEmision", 1); // Permite ver el color de las ventanas sin depender de farolas.
         }
+        float fachada = mitad + 0.01f; // Separa la ventana de la pared para evitar parpadeo de profundidad.
         for (float y = 1.7f; y < altura; y += 2) { // Recorre los pisos separados por dos unidades de altura.
             for (float desplazamiento = -2; desplazamiento <= 2; desplazamiento += 2) { // Coloca tres ventanas por fachada.
-                caja(x + desplazamiento, y, z - 3.51f, 0.8f, 0.9f, 0.04f, 0.95f, 0.75f, 0.38f); // Ventana de la fachada norte.
-                caja(x + desplazamiento, y, z + 3.51f, 0.8f, 0.9f, 0.04f, 0.95f, 0.75f, 0.38f); // Ventana de la fachada sur.
-                caja(x - 3.51f, y, z + desplazamiento, 0.04f, 0.9f, 0.8f, 0.95f, 0.75f, 0.38f); // Ventana de la fachada oeste.
-                caja(x + 3.51f, y, z + desplazamiento, 0.04f, 0.9f, 0.8f, 0.95f, 0.75f, 0.38f); // Ventana de la fachada este.
+                caja(x + desplazamiento, y, z - fachada, 0.8f, 0.9f, 0.04f, 0.95f, 0.75f, 0.38f); // Ventana de la fachada norte.
+                caja(x + desplazamiento, y, z + fachada, 0.8f, 0.9f, 0.04f, 0.95f, 0.75f, 0.38f); // Ventana de la fachada sur.
+                caja(x - fachada, y, z + desplazamiento, 0.04f, 0.9f, 0.8f, 0.95f, 0.75f, 0.38f); // Ventana de la fachada oeste.
+                caja(x + fachada, y, z + desplazamiento, 0.04f, 0.9f, 0.8f, 0.95f, 0.75f, 0.38f); // Ventana de la fachada este.
             }
         }
         entero("uEmision", 0); // Restablece la iluminación normal de los demás elementos.
