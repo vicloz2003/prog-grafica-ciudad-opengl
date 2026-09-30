@@ -9,7 +9,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <!-- Misma versión que los ejemplos originales. -->
     <lwjgl.version>3.3.3</lwjgl.version>
-    <mainClass>com.graphics.clase4</mainClass>
+    <mainClass>com.graphics.clase5</mainClass>
   </properties>
   <dependencies>
     <!-- Bindings Java y bibliotecas nativas. LWJGL selecciona las de la plataforma actual. -->
