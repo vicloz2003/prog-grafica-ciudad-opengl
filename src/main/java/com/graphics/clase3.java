@@ -76,7 +76,7 @@ public class clase3 extends clase2 {
 
         float frenteX = -(float) Math.sin(angulo); // Calcula hacia dónde apunta el auto en X.
         float frenteZ = -(float) Math.cos(angulo); // Calcula hacia dónde apunta el auto en Z.
-        vector("uAuto", autoX, 0.7f, autoZ); // Envía el centro del vehículo a la altura de sus focos.
+        vector("uAuto", autoX, 1.0f, autoZ); // Envía el centro del vehículo a la altura de sus focos.
         vector("uFrente", frenteX, 0, frenteZ); // Envía la dirección frontal del vehículo.
     }
 
@@ -149,11 +149,11 @@ public class clase3 extends clase2 {
                 if (uFaros == 1) { // Calcula los conos únicamente si están encendidos.
                     for (int indice = 0; indice < 2; indice++) { // Repite el cálculo para los dos faros.
                         vec3 lateral = vec3(-uFrente.z, 0.0, uFrente.x); // Obtiene la dirección hacia el lado derecho del auto.
-                        float separacion = -0.55; // Selecciona inicialmente el faro izquierdo.
+                        float separacion = -0.64; // Selecciona inicialmente el faro izquierdo.
                         if (indice == 1) { // Comprueba si corresponde calcular el segundo faro.
-                            separacion = 0.55; // Desplaza el segundo faro al lado derecho.
+                            separacion = 0.64; // Desplaza el segundo faro al lado derecho.
                         }
-                        vec3 origen = uAuto + uFrente * 1.36 + lateral * separacion; // Ubica el faro delante de la carrocería.
+                        vec3 origen = uAuto + uFrente * 1.6 + lateral * separacion; // Ubica el faro delante de la carrocería.
                         vec3 haciaSuperficie = vMundo - origen; // Forma el vector del faro al fragmento.
                         float distancia = length(haciaSuperficie); // Mide la distancia recorrida por la luz.
                         vec3 eje = normalize(uFrente + vec3(0.0, -0.10, 0.0)); // Inclina el foco ligeramente hacia el suelo.

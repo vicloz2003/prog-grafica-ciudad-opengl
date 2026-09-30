@@ -17,7 +17,7 @@ public class clase2 extends clase1 {
     protected float angulo = 0; // Orientación en radianes; cero apunta hacia -Z.
     protected float velocidad = 0; // Unidades por segundo; un valor negativo significa reversa.
     protected boolean camaraAerea = false; // false: seguir el auto; true: observar toda la ciudad.
-    protected static final float RADIO_AUTO = 1.65f; // Radio que contiene al vehículo para las colisiones.
+    protected static final float RADIO_AUTO = 1.9f; // Radio que contiene a la camioneta (incluida la rueda de repuesto).
 
     // ==================== 2. TECLADO Y REINICIO ====================
 
@@ -156,7 +156,7 @@ public class clase2 extends clase1 {
         float camaraX = autoX + (float) Math.sin(angulo) * 12; // Coloca la cámara 12 unidades detrás en X.
         float camaraZ = autoZ + (float) Math.cos(angulo) * 12; // Coloca la cámara 12 unidades detrás en Z.
         vector("uOjo", camaraX, 9, camaraZ); // Envía la posición de la cámara, a 9 unidades de altura.
-        vector("uObjetivo", autoX, 0.8f, autoZ); // Orienta la cámara hacia la carrocería.
+        vector("uObjetivo", autoX, 1.1f, autoZ); // Orienta la cámara hacia la carrocería.
         decimal("uAspecto", (float) ancho / alto); // Mantiene las proporciones al redimensionar la ventana.
     }
 
@@ -169,33 +169,78 @@ public class clase2 extends clase1 {
         dibujarAuto(); // Añade el modelo del vehículo sobre la ciudad.
     }
 
-    /** Construye el auto con cajas; argumentos: posición XYZ, tamaño XYZ y color RGB. */
+    /**
+     * Construye una camioneta todoterreno negra de líneas rectas.
+     * Coordenadas locales: X = lado derecho, Y = altura, Z = hacia atrás (el frente mira a -Z).
+     * Argumentos de pieza(): posición XYZ, tamaño XYZ y color RGB.
+     */
     protected void dibujarAuto() {
-        pieza(0, 0.65f, 0, 1.65f, 0.55f, 2.6f, 0.95f, 0.24f, 0.12f); // Dibuja la carrocería roja.
-        pieza(0, 1.12f, 0.12f, 1.3f, 0.55f, 1.25f, 0.22f, 0.65f, 0.78f); // Dibuja la cabina azulada.
-        float[] ladosRuedas = {-0.88f, 0.88f}; // Ubica ruedas a izquierda y derecha del auto.
-        float[] ejesRuedas = {-0.82f, 0.82f}; // Ubica las ruedas delanteras y traseras.
+        float negro = 0.07f; // Negro con un poco de valor para que la luz marque las caras.
+        float[] gris = {0.20f, 0.20f, 0.22f}; // Parachoques, parrilla y estribos.
+        float[] vidrio = {0.10f, 0.13f, 0.17f}; // Vidrios polarizados.
 
-        for (float x : ladosRuedas) { // Selecciona uno de los dos lados del vehículo.
-            for (float z : ejesRuedas) { // Selecciona el eje delantero o trasero.
-                pieza(x, 0.38f, z, 0.24f, 0.58f, 0.6f, 0.055f, 0.065f, 0.08f); // Dibuja una rueda oscura.
+        // Ruedas grandes de todoterreno.
+        float[] ladosRuedas = {-0.92f, 0.92f}; // Izquierda y derecha.
+        float[] ejesRuedas = {-1.0f, 1.0f}; // Eje delantero y trasero.
+        for (float x : ladosRuedas) {
+            for (float z : ejesRuedas) {
+                pieza(x, 0.4f, z, 0.34f, 0.8f, 0.8f, 0.04f, 0.04f, 0.05f); // Neumático.
+                pieza(x * 1.1f, 0.4f, z, 0.04f, 0.36f, 0.36f, 0.45f, 0.46f, 0.48f); // Llanta vista desde el costado.
             }
         }
 
-        float[] ladosFaros = {-0.55f, 0.55f}; // Define la separación lateral de las luces.
-        for (float x : ladosFaros) { // Repite el dibujo para ambos lados.
-            pieza(x, 0.68f, -1.32f, 0.38f, 0.2f, 0.07f, 1, 0.95f, 0.65f); // Dibuja un faro delantero claro.
-            pieza(x, 0.68f, 1.32f, 0.35f, 0.17f, 0.07f, 0.85f, 0.05f, 0.05f); // Dibuja una luz trasera roja.
+        // Carrocería: cuerpo inferior recto y cabina alta desplazada hacia atrás.
+        pieza(0, 0.95f, 0, 1.8f, 0.75f, 3.1f, negro, negro, negro + 0.01f); // Cuerpo con el capó plano.
+        pieza(0, 1.68f, 0.35f, 1.72f, 0.72f, 1.9f, negro, negro, negro + 0.01f); // Cabina.
+        pieza(0, 0.55f, -1.62f, 1.9f, 0.3f, 0.16f, gris[0], gris[1], gris[2]); // Parachoques delantero.
+        pieza(0, 0.55f, 1.62f, 1.9f, 0.3f, 0.16f, gris[0], gris[1], gris[2]); // Parachoques trasero.
+        for (float x : ladosRuedas) {
+            pieza(x * 1.03f, 0.45f, 0, 0.12f, 0.06f, 1.4f, gris[0], gris[1], gris[2]); // Estribo lateral.
+            pieza(x * 1.07f, 1.5f, -0.5f, 0.12f, 0.14f, 0.2f, negro, negro, negro); // Espejo retrovisor.
+        }
+
+        // Vidrios de la cabina.
+        pieza(0, 1.72f, -0.62f, 1.5f, 0.52f, 0.04f, vidrio[0], vidrio[1], vidrio[2]); // Parabrisas.
+        pieza(0, 1.72f, 1.31f, 1.4f, 0.45f, 0.04f, vidrio[0], vidrio[1], vidrio[2]); // Luneta trasera.
+        for (float x : ladosRuedas) {
+            pieza(x * 0.94f, 1.72f, 0.35f, 0.04f, 0.5f, 1.6f, vidrio[0], vidrio[1], vidrio[2]); // Ventanas laterales.
+        }
+
+        // Frente: parrilla con listones, faros e intermitentes sobre los guardabarros.
+        pieza(0, 0.98f, -1.56f, 1.0f, 0.42f, 0.04f, gris[0], gris[1], gris[2]); // Parrilla.
+        for (float y = 0.88f; y <= 1.1f; y += 0.1f) {
+            pieza(0, y, -1.585f, 0.95f, 0.03f, 0.02f, 0.45f, 0.46f, 0.48f); // Listón horizontal.
+        }
+        for (float x : new float[] {-0.64f, 0.64f}) {
+            pieza(x, 1.0f, -1.57f, 0.28f, 0.28f, 0.05f, 1, 0.95f, 0.70f); // Faro delantero.
+            pieza(x * 1.22f, 1.36f, -1.42f, 0.18f, 0.08f, 0.14f, 1, 0.55f, 0.10f); // Intermitente naranja.
+            pieza(x * 1.25f, 1.0f, 1.57f, 0.14f, 0.32f, 0.05f, 0.85f, 0.05f, 0.05f); // Luz trasera roja.
+        }
+
+        // Rueda de repuesto en la puerta trasera y portaequipaje en el techo.
+        pieza(0, 1.15f, 1.69f, 0.72f, 0.72f, 0.26f, 0.04f, 0.04f, 0.05f); // Rueda de repuesto.
+        pieza(0, 1.15f, 1.83f, 0.3f, 0.3f, 0.04f, 0.45f, 0.46f, 0.48f); // Tapa central de la rueda.
+        for (float x : new float[] {-0.7f, 0.7f}) {
+            pieza(x, 2.09f, 0.35f, 0.06f, 0.06f, 1.7f, gris[0], gris[1], gris[2]); // Riel del portaequipaje.
+        }
+        for (float z : new float[] {-0.3f, 1.0f}) {
+            pieza(0, 2.09f, z, 1.46f, 0.05f, 0.06f, gris[0], gris[1], gris[2]); // Barra transversal.
         }
     }
 
-    /** Transforma una pieza del espacio local del auto al espacio de la ciudad. */
+    /** Transforma una pieza del espacio local del auto del jugador al espacio de la ciudad. */
     protected void pieza(float x, float y, float z, float sx, float sy, float sz, float r, float g, float b) {
-        float coseno = (float) Math.cos(angulo); // Calcula el coseno de la orientación del auto.
-        float seno = (float) Math.sin(angulo); // Calcula el seno de la misma orientación.
-        float mundoX = autoX + coseno * x + seno * z; // Gira la posición local y suma la posición X del auto.
-        float mundoZ = autoZ - seno * x + coseno * z; // Gira la posición local y suma la posición Z del auto.
-        cajaGirada(mundoX, y, mundoZ, sx, sy, sz, r, g, b, angulo); // Dibuja la pieza con la orientación del vehículo.
+        pieza(autoX, autoZ, angulo, x, y, z, sx, sy, sz, r, g, b); // Usa la posición y orientación del jugador.
+    }
+
+    /** Transforma una pieza local de cualquier vehículo, dada su posición y orientación en la ciudad. */
+    protected void pieza(float baseX, float baseZ, float baseAngulo,
+            float x, float y, float z, float sx, float sy, float sz, float r, float g, float b) {
+        float coseno = (float) Math.cos(baseAngulo); // Calcula el coseno de la orientación del vehículo.
+        float seno = (float) Math.sin(baseAngulo); // Calcula el seno de la misma orientación.
+        float mundoX = baseX + coseno * x + seno * z; // Gira la posición local y suma la posición X del vehículo.
+        float mundoZ = baseZ - seno * x + coseno * z; // Gira la posición local y suma la posición Z del vehículo.
+        cajaGirada(mundoX, y, mundoZ, sx, sy, sz, r, g, b, baseAngulo); // Dibuja la pieza con la orientación del vehículo.
     }
 
     /** Punto de entrada para ejecutar únicamente la segunda etapa. */
