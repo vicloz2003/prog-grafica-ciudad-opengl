@@ -112,6 +112,7 @@ public class clase3 extends clase2 {
             #version 330 core // Selecciona la version GLSL correspondiente a OpenGL 3.3.
             in vec3 vMundo; // Recibe la posicion del fragmento en la ciudad.
             in vec3 vNormal; // Recibe la direccion perpendicular a la superficie.
+            in vec3 vLocal; // Recibe la posicion dentro de la pieza (para detalles que viajan con el objeto).
             uniform vec3 uColor; // Recibe el color base de la caja.
             uniform vec3 uLuces[%d]; // Recibe las posiciones de las farolas; Java escribe el tamano real.
             uniform vec3 uAuto; // Recibe la posicion del auto a la altura de los faros.
@@ -120,7 +121,114 @@ public class clase3 extends clase2 {
             uniform int uFaros; // Vale 1 cuando los focos estan encendidos.
             uniform int uEmision; // Vale 1 si el objeto debe conservar su color sin oscurecerse.
             uniform int uMapa; // Vale 1 durante el dibujo del minimapa de clase4.
+            uniform int uMaterial; // Patron procedural: 0 plano, 1 acera, 2 pared con ventanas, 3 torre, 4 galpon, 5 paso peatonal.
+            uniform vec3 uOjo; // Posicion de la camara; el patron fino se desvanece con la distancia.
+            uniform vec3 uEscala; // Tamano de la pieza actual; sirve para alinear las ventanas con las esquinas.
+            uniform vec3 uLuzVentana; // Color de las ventanas encendidas del edificio actual.
             out vec4 color; // Entrega el color RGBA final al framebuffer.
+
+            float azar(vec2 p) { // Numero pseudoaleatorio entre 0 y 1 que depende solo de la celda p.
+                return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+            }
+
+            float ruido(vec2 p) { // Ruido suave: interpola el azar de las cuatro esquinas de la celda.
+                vec2 celda = floor(p);
+                vec2 f = fract(p);
+                vec2 suave = f * f * (3.0 - 2.0 * f); // Curva que evita cambios bruscos en los bordes.
+                float abajo = mix(azar(celda), azar(celda + vec2(1.0, 0.0)), suave.x);
+                float arriba = mix(azar(celda + vec2(0.0, 1.0)), azar(celda + vec2(1.0, 1.0)), suave.x);
+                return mix(abajo, arriba, suave.y);
+            }
+
+            vec3 emiColor = vec3(0.0); // Luz propia de las ventanas encendidas; se suma al final, sin oscurecerse.
+
+            /*
+             * Cuadricula de ventanas alineada con las esquinas del edificio.
+             * muro: color de la pared; paso: ancho y alto de cada celda; margen: parte de la celda sin vidrio;
+             * soloFila: si es mayor o igual que 0, solo esa fila de celdas lleva ventanas (galpones).
+             */
+            vec3 ventanas(vec3 muro, vec3 normal, vec2 paso, vec2 margen, float soloFila) {
+                bool lateral = abs(normal.x) > 0.5; // Pared perpendicular a X: se recorre en Z.
+                float ancho = lateral ? uEscala.z : uEscala.x; // Ancho de esta pared.
+                float horizontal = lateral ? vLocal.z : vLocal.x; // Posicion a lo largo de la pared, desde su centro.
+                float columnas = max(1.0, floor(ancho / paso.x)); // Cuantas ventanas caben, para que el borde quede simetrico.
+                float filas = max(1.0, floor(uEscala.y / paso.y));
+                vec2 celda = vec2((horizontal + ancho * 0.5) * columnas / ancho, (vLocal.y + uEscala.y * 0.5) * filas / uEscala.y);
+                vec2 id = floor(celda); // Numero de columna y de piso de esta ventana.
+                vec2 borde = min(fract(celda), 1.0 - fract(celda)); // Distancia al borde de la celda.
+                float dentro = smoothstep(margen.x, margen.x + 0.05, borde.x) * smoothstep(margen.y, margen.y + 0.05, borde.y);
+                if (soloFila >= 0.0 && id.y != soloFila) {
+                    dentro = 0.0;
+                }
+
+                vec2 bloque = floor((vMundo.xz + 65.0) / 10.0); // Identifica la manzana para que cada edificio sea distinto.
+                float cara = normal.x + normal.z * 2.0; // Identifica la pared (-2, -1, 1 o 2).
+                float sorteo = azar(id + bloque * vec2(7.0, 13.0) + vec2(cara * 5.0, cara * 3.0));
+                float tono = azar(id.yx + bloque * vec2(11.0, 5.0) + cara);
+                bool encendida = uNoche == 1 && sorteo > 0.70; // Cerca del 30 por ciento encendidas de noche.
+
+                vec3 reflejoCielo = vec3(0.12, 0.17, 0.24) * smoothstep(2.0, 30.0, vMundo.y); // Los pisos altos reflejan mas cielo.
+                vec3 vidrio = vec3(0.11, 0.15, 0.21) * (0.75 + 0.6 * tono) + reflejoCielo;
+                vec3 luzVentana = mix(uLuzVentana, vec3(0.85, 0.92, 1.0), step(0.75, tono) * 0.5); // Algunas ventanas con luz mas fria.
+                luzVentana *= 0.62 + 0.26 * tono;
+
+                float cercaFino = 1.0 - smoothstep(0.2, 0.5, max(fwidth(celda.x), fwidth(celda.y))); // 0 cuando las ventanas son casi un pixel.
+                float cobertura = (1.0 - 2.0 * margen.x) * (1.0 - 2.0 * margen.y);
+                if (soloFila >= 0.0) {
+                    cobertura /= filas;
+                }
+                vec3 detalle = mix(muro, vidrio, dentro);
+                vec3 promedio = mix(muro, vec3(0.15, 0.20, 0.28), cobertura);
+                float luzDetalle = encendida ? dentro : 0.0;
+                emiColor = mix(uLuzVentana * cobertura * 0.30 * float(uNoche), luzVentana * luzDetalle, cercaFino);
+                return mix(promedio, detalle, cercaFino);
+            }
+
+            vec3 textura(vec3 base, vec3 normal) { // Devuelve el color base modulado por el patron del material.
+                float d = length(vMundo - uOjo); // Distancia del fragmento a la camara.
+                float lejos = smoothstep(35.0, 100.0, d); // 0 cerca, 1 lejos: evita parpadeo del detalle fino.
+
+                if (uMaterial == 1) { // Acera: baldosas de 1.25 con juntas finas y variacion de tono.
+                    if (normal.y < 0.5) {
+                        return base;
+                    }
+                    vec2 p = vMundo.xz / 1.25;
+                    vec2 f = fract(p);
+                    float distanciaJunta = min(min(f.x, 1.0 - f.x), min(f.y, 1.0 - f.y));
+                    float junta = (1.0 - smoothstep(0.0, 0.04, distanciaJunta)) * (1.0 - lejos);
+                    float variacion = azar(floor(p)) - 0.5;
+                    float mancha = ruido(vMundo.xz * 0.8) - 0.5;
+                    return base * (1.0 + variacion * 0.12 + mancha * 0.08) * (1.0 - 0.3 * junta);
+                }
+
+                if (uMaterial == 5) { // Paso peatonal: franjas de 0.5 cada 1.0 repartidas a lo ancho de la calle.
+                    float largo = uEscala.x > uEscala.z ? vLocal.x : vLocal.z; // Las franjas se reparten sobre el lado mayor.
+                    float franja = step(0.5, fract(largo + 0.75)); // Una franja centrada en cada valor entero.
+                    float cercaFino = 1.0 - smoothstep(0.3, 0.6, fwidth(largo)); // De lejos se funde en un gris medio.
+                    franja = mix(0.5, franja, cercaFino);
+                    return mix(vec3(0.16, 0.19, 0.23), base, franja); // Entre franjas se ve el color del asfalto.
+                }
+
+                if (uMaterial < 2 || abs(normal.y) > 0.5) { // Solo las paredes laterales llevan patron de fachada.
+                    return base;
+                }
+                float u = abs(normal.x) > 0.5 ? vMundo.z : vMundo.x; // Coordenada horizontal a lo largo de la pared.
+                float y = vMundo.y; // Altura sobre el suelo.
+
+                if (uMaterial == 2) { // Pared lisa con ventanas: solo una variacion de tono muy suave, como revoque.
+                    float revoque = ruido(vec2(u, y) * 0.6) - 0.5;
+                    return ventanas(base * (1.0 + revoque * 0.08), normal, vec2(1.3, 1.8), vec2(0.20, 0.20), -1.0);
+                }
+
+                if (uMaterial == 3) { // Torre de oficinas: muro cortina con ventanas muy juntas.
+                    float reflejo = 0.9 + 0.2 * ruido(vec2(u * 0.2, y * 0.1));
+                    return ventanas(base * reflejo, normal, vec2(0.9, 1.3), vec2(0.10, 0.12), -1.0);
+                }
+
+                float onda = 0.5 + 0.5 * sin(u * 12.566); // Galpon: chapa acanalada con una franja de ventanas altas.
+                vec3 chapa = mix(base * (0.82 + 0.28 * onda), base * 0.96, lejos);
+                return ventanas(chapa, normal, vec2(1.8, 1.4), vec2(0.15, 0.20), 1.0);
+            }
 
             void main() { // Se ejecuta para cada fragmento visible de una caja.
                 if (uEmision == 1 || uMapa == 1) { // Bombillas y minimapa usan colores directos.
@@ -129,6 +237,7 @@ public class clase3 extends clase2 {
                 }
 
                 vec3 normal = normalize(vNormal); // Convierte la normal interpolada en un vector unitario.
+                vec3 base = textura(uColor, normal); // Color del material despues de aplicar el patron.
                 vec3 luz = vec3(0.48); // Define la luz ambiental diurna que llega a todas las caras.
                 float intensidadSol = 0.65; // Define la fuerza de la iluminacion direccional diurna.
                 if (uNoche == 1) { // Ajusta el ambiente si es de noche.
@@ -170,7 +279,7 @@ public class clase3 extends clase2 {
                     }
                 }
 
-                color = vec4(uColor * luz, 1.0); // Multiplica el material por toda la luz acumulada.
+                color = vec4(base * luz + emiColor, 1.0); // Material iluminado mas la luz propia de las ventanas.
             }
             """.formatted(LUCES.length, LUCES.length); // Inserta la cantidad de farolas en los dos %d del texto GLSL.
     }

@@ -206,6 +206,7 @@ public class clase1 {
         glUseProgram(programa); // Activa los shaders de esta etapa.
         glBindVertexArray(vao); // Selecciona los atributos del cubo compartido.
         entero("uMapa", 0); // Selecciona perspectiva normal, no la proyección del minimapa.
+        material(MAT_PLANO); // Cada cuadro empieza con colores planos.
         decimal("uMedioMapa", LIMITE + 2); // Mitad del área que abarca el minimapa, con un pequeño margen.
         configurarCamara(); // Actualiza la posición y el objetivo de la cámara.
         prepararLuces(); // Envía iluminación si la etapa actual la implementa.
@@ -227,7 +228,9 @@ public class clase1 {
                 if (tipo == CALLE) { // Selecciona las celdas transitables.
                     dibujarMarcasCalle(fila, columna, x, z); // Añade líneas amarillas entre intersecciones.
                 } else { // Las demás celdas representan manzanas completas.
+                    material(MAT_ACERA); // La acera lleva baldosas.
                     caja(x, 0.15f, z, 10, 0.3f, 10, 0.60f, 0.64f, 0.66f); // Dibuja la acera elevada sobre el asfalto.
+                    material(MAT_PLANO);
                     if (tipo == PARQUE) { // Un parque solo lleva césped; clase4 añade árboles y banco.
                         caja(x, 0.32f, z, 9, 0.1f, 9, 0.20f, 0.45f, 0.28f); // Cubre la parcela con césped verde.
                     } else { // Cualquier otro tipo es un edificio de algún distrito.
@@ -289,13 +292,13 @@ public class clase1 {
         float r;
         float g;
         float b;
-        if (tipo == FINANCIERO) { // Vidrio azul acero o gris claro.
-            boolean azul = v % 2 == 0;
-            r = azul ? 0.30f : 0.52f;
-            g = azul ? 0.44f : 0.56f;
-            b = azul ? 0.60f : 0.62f;
-        } else if (tipo == COMERCIAL) { // Paleta de colores vivos.
-            float[][] paleta = {{0.82f, 0.30f, 0.28f}, {0.93f, 0.63f, 0.20f}, {0.28f, 0.58f, 0.84f}, {0.55f, 0.36f, 0.74f}};
+        if (tipo == FINANCIERO) { // Gris acero oscuro o claro, sin tinte de color.
+            boolean oscuro = v % 2 == 0;
+            r = oscuro ? 0.44f : 0.58f;
+            g = oscuro ? 0.46f : 0.60f;
+            b = oscuro ? 0.49f : 0.62f;
+        } else if (tipo == COMERCIAL) { // Paleta apagada: arena, gris claro, terracota suave y crema.
+            float[][] paleta = {{0.76f, 0.70f, 0.60f}, {0.64f, 0.64f, 0.62f}, {0.68f, 0.50f, 0.42f}, {0.84f, 0.80f, 0.70f}};
             float[] color = paleta[v % paleta.length];
             r = color[0];
             g = color[1];
@@ -305,13 +308,30 @@ public class clase1 {
             r = oxido ? 0.55f : 0.47f;
             g = oxido ? 0.36f : 0.47f;
             b = oxido ? 0.26f : 0.45f;
-        } else { // Residencial: terracota o crema.
+        } else { // Residencial: terracota suave o crema.
             boolean terracota = v % 2 == 0;
-            r = terracota ? 0.72f : 0.86f;
-            g = terracota ? 0.40f : 0.78f;
-            b = terracota ? 0.28f : 0.60f;
+            r = terracota ? 0.66f : 0.84f;
+            g = terracota ? 0.46f : 0.78f;
+            b = terracota ? 0.38f : 0.64f;
         }
+        int textura = MAT_MURO; // Residencial y comercial: pared lisa con ventanas.
+        if (tipo == FINANCIERO) {
+            textura = MAT_VIDRIO; // Torres: muro cortina de vidrio.
+        } else if (tipo == INDUSTRIAL) {
+            textura = MAT_GALPON; // Galpones: chapa acanalada.
+        }
+        if (tipo == FINANCIERO) { // Color de las ventanas encendidas de noche: oficinas con luz blanca fria.
+            vector("uLuzVentana", 0.85f, 0.92f, 1.0f);
+        } else if (tipo == COMERCIAL) { // Locales y oficinas: blanco calido.
+            vector("uLuzVentana", 1.0f, 0.90f, 0.70f);
+        } else if (tipo == INDUSTRIAL) { // Lamparas de sodio naranjas.
+            vector("uLuzVentana", 1.0f, 0.60f, 0.22f);
+        } else { // Viviendas: amarillo calido.
+            vector("uLuzVentana", 1.0f, 0.78f, 0.42f);
+        }
+        material(textura); // Solo las caras laterales del cuerpo llevan textura.
         caja(x, base + altura / 2, z, ancho, altura, fondo, r, g, b); // Cuerpo principal del edificio.
+        material(MAT_PLANO); // Techos, antenas y toldos siguen planos.
         float techo = base + altura; // Altura de la cara superior del cuerpo.
 
         if (tipo == FINANCIERO) { // Torre: remate escalonado y antena.
@@ -332,12 +352,12 @@ public class clase1 {
     /** Dibuja las líneas discontinuas de las calles dejando los cruces despejados. */
     private void dibujarMarcasCalle(int fila, int columna, float x, float z) {
         if (fila % 2 == 0 && columna % 2 == 1) { // Identifica un tramo horizontal situado entre cruces.
-            for (int desplazamiento = -3; desplazamiento <= 3; desplazamiento += 3) { // Coloca tres marcas en la celda.
+            for (int desplazamiento = -2; desplazamiento <= 2; desplazamiento += 2) { // Coloca tres marcas en la celda.
                 caja(x + desplazamiento, 0.025f, z, 1.6f, 0.03f, 0.13f, 1, 0.84f, 0.35f); // Dibuja una línea alargada en X.
             }
         }
         if (columna % 2 == 0 && fila % 2 == 1) { // Identifica un tramo vertical situado entre cruces.
-            for (int desplazamiento = -3; desplazamiento <= 3; desplazamiento += 3) { // Repite las marcas sobre ese tramo.
+            for (int desplazamiento = -2; desplazamiento <= 2; desplazamiento += 2) { // Repite las marcas sobre ese tramo.
                 caja(x, 0.025f, z + desplazamiento, 0.13f, 0.03f, 1.6f, 1, 0.84f, 0.35f); // Dibuja una línea alargada en Z.
             }
         }
@@ -366,6 +386,19 @@ public class clase1 {
             uniforms.put(nombre, ubicacion); // Guarda la respuesta; -1 significa que el shader no usa esa variable.
         }
         return uniforms.get(nombre); // Recupera la ubicación guardada; OpenGL ignora envíos a -1.
+    }
+
+    // Materiales procedurales: el shader de fragmentos decide el patrón según este número.
+    protected static final int MAT_PLANO = 0; // Color liso, sin patrón.
+    protected static final int MAT_ACERA = 1; // Baldosas con junta.
+    protected static final int MAT_MURO = 2; // Pared lisa con ventanas.
+    protected static final int MAT_VIDRIO = 3; // Torre de oficinas: muro cortina con ventanas muy juntas.
+    protected static final int MAT_GALPON = 4; // Chapa acanalada con una franja de ventanas altas.
+    protected static final int MAT_PASO = 5; // Paso peatonal: franjas blancas sobre el asfalto.
+
+    /** Elige el material de los objetos que se dibujen a continuación. */
+    protected void material(int tipo) {
+        entero("uMaterial", tipo); // Se ignora si el shader activo no declara uMaterial (clase1 y clase2).
     }
 
     /** Envía tres números reales a una variable vec3 del shader. */
@@ -401,6 +434,7 @@ public class clase1 {
             uniform float uMedioMapa; // Mitad del lado del mundo que cabe en el minimapa.
             out vec3 vMundo; // Envia la posicion mundial al shader de fragmentos.
             out vec3 vNormal; // Envia la normal transformada para la iluminacion de clase3.
+            out vec3 vLocal; // Posicion dentro de la pieza (sin giro ni traslado): alinea ventanas y franjas con la pieza.
 
             void main() { // OpenGL ejecuta este bloque una vez por vertice.
                 float coseno = cos(uGiro); // Calcula el coseno del giro del objeto.
@@ -410,6 +444,7 @@ public class clase1 {
                     0.0, 1.0, 0.0, // Segunda columna: Y permanece vertical.
                     seno, 0.0, coseno // Tercera columna: direccion del eje Z rotado.
                 ); // Completa la matriz de tres filas y tres columnas.
+                vLocal = aPos * uEscala; // Posicion local en unidades reales de la pieza.
                 vMundo = giro * (aPos * uEscala) + uPos; // Escala, gira y traslada el vertice al mundo.
                 vNormal = normalize(giro * (aNormal / uEscala)); // Corrige la normal con la inversa transpuesta de escala y giro.
 

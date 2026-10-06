@@ -117,15 +117,13 @@ public class clase4 extends clase3 {
                 int tipo = MAPA[fila][columna]; // Lee el contenido de la celda.
                 if (tipo == PARQUE) { // Detecta una parcela de parque.
                     dibujarParque(x, z); // Añade árboles y un banco.
-                } else if (tipo != CALLE) { // Cualquier otro tipo es un edificio.
-                    dibujarVentanas(tipo, fila, columna, x, z); // Coloca ventanas en sus cuatro fachadas.
                 }
                 if (tipo != CALLE) { // La señalización se coloca junto a las manzanas, no en celdas de calle.
-                    dibujarPasoPeatonal(x, z); // Añade el cruce pintado sobre la calle contigua.
                     dibujarSemaforo(x + 4, z - 4); // Coloca el semáforo dentro de la acera.
                 }
             }
         }
+        dibujarPasosPeatonales(); // Pinta los cruces de peatones en las intersecciones.
     }
 
     /** Construye cuatro árboles y un banco utilizando cajas. */
@@ -145,80 +143,40 @@ public class clase4 extends clase3 {
     }
 
     /**
-     * Distribuye ventanas por pisos en las cuatro paredes del edificio.
-     * De día todas muestran vidrio; de noche solo algunas se encienden, con el color de luz de su distrito.
+     * Pinta pasos peatonales en los cruces de las dos avenidas centrales (fila y columna del medio),
+     * en cada entrada de la intersección. Solo allí, para no recargar la ciudad de franjas.
+     * Cada paso queda justo antes del cruce.
+     * Cada paso es una sola caja delgada que atraviesa la calle; el shader dibuja sus franjas
+     * (material MAT_PASO), así se evitan cientos de cajas sueltas.
      */
-    private void dibujarVentanas(int tipo, int fila, int columna, float x, float z) {
-        float altura = alturaEdificio(tipo, fila, columna); // Recupera la misma altura calculada en clase1.
-        float fachadaX = anchoEdificio(tipo) / 2 + 0.01f; // Distancia a las fachadas este y oeste, separada de la pared.
-        float fachadaZ = profundidadEdificio(tipo) / 2 + 0.01f; // Distancia a las fachadas norte y sur.
-        float techoVentanas = altura; // Los pisos llegan hasta la cubierta.
-        if (tipo == INDUSTRIAL) { // Los galpones solo tienen ventanas en la planta baja.
-            techoVentanas = 2.5f;
-        }
-        int piso = 0; // Número de piso, usado para alternar colores y encendido.
-        for (float y = 1.7f; y < techoVentanas; y += 2) { // Recorre los pisos separados por dos unidades de altura.
-            int indice = 0; // Número de ventana dentro del piso.
-            for (float desplazamiento = -2; desplazamiento <= 2; desplazamiento += 2) { // Tres ventanas por fachada.
-                prepararVentana(tipo, fila, columna, piso, indice++);
-                caja(x + desplazamiento, y, z - fachadaZ, 0.8f, 0.9f, 0.04f, colorVentana[0], colorVentana[1], colorVentana[2]); // Norte.
-                prepararVentana(tipo, fila, columna, piso, indice++);
-                caja(x + desplazamiento, y, z + fachadaZ, 0.8f, 0.9f, 0.04f, colorVentana[0], colorVentana[1], colorVentana[2]); // Sur.
-                prepararVentana(tipo, fila, columna, piso, indice++);
-                caja(x - fachadaX, y, z + desplazamiento, 0.04f, 0.9f, 0.8f, colorVentana[0], colorVentana[1], colorVentana[2]); // Oeste.
-                prepararVentana(tipo, fila, columna, piso, indice++);
-                caja(x + fachadaX, y, z + desplazamiento, 0.04f, 0.9f, 0.8f, colorVentana[0], colorVentana[1], colorVentana[2]); // Este.
+    private void dibujarPasosPeatonales() {
+        float separacion = CELDA / 2 + 1.1f; // Del centro del cruce al centro del paso: borde del cruce más medio paso.
+        float ancho = CELDA - 1; // Cubre la calzada sin tocar las aceras.
+        float fondo = 1.8f; // Ancho de la franja peatonal en el sentido de los autos.
+        material(MAT_PASO);
+        int avenida = MAPA.length / 2; // Índice de la avenida central (6 en un mapa de 13).
+        for (int fila = 2; fila < MAPA.length - 1; fila += 2) { // Cruces interiores: filas y columnas pares sin los bordes.
+            for (int columna = 2; columna < MAPA.length - 1; columna += 2) {
+                if (fila != avenida && columna != avenida) { // Solo los cruces que están sobre una avenida central.
+                    continue;
+                }
+                float x = centro(columna);
+                float z = centro(fila);
+                if (fila > 0) { // Entrada norte: el paso cruza la calle que llega desde el norte.
+                    caja(x, 0.03f, z - separacion, ancho, 0.02f, fondo, 0.85f, 0.87f, 0.83f);
+                }
+                if (fila < MAPA.length - 1) { // Entrada sur.
+                    caja(x, 0.03f, z + separacion, ancho, 0.02f, fondo, 0.85f, 0.87f, 0.83f);
+                }
+                if (columna > 0) { // Entrada oeste: el paso queda girado, a lo largo de Z.
+                    caja(x - separacion, 0.03f, z, fondo, 0.02f, ancho, 0.85f, 0.87f, 0.83f);
+                }
+                if (columna < MAPA.length - 1) { // Entrada este.
+                    caja(x + separacion, 0.03f, z, fondo, 0.02f, ancho, 0.85f, 0.87f, 0.83f);
+                }
             }
-            piso++;
         }
-        entero("uEmision", 0); // Restablece la iluminación normal de los demás elementos.
-    }
-
-    private final float[] colorVentana = new float[3]; // Color de la próxima ventana; se reutiliza para no crear arreglos.
-
-    /** Decide el color y la emisión de una ventana según el distrito, el piso y la hora del día. */
-    private void prepararVentana(int tipo, int fila, int columna, int piso, int indice) {
-        if (!noche) { // De día: vidrio gris azulado que recibe la luz del sol.
-            entero("uEmision", 0);
-            colorVentana[0] = 0.36f;
-            colorVentana[1] = 0.46f;
-            colorVentana[2] = 0.56f;
-            return;
-        }
-        boolean encendida = (fila * 7 + piso * 3 + columna * 5 + indice) % 4 != 0; // Patrón fijo: una de cada cuatro apagada.
-        if (!encendida) { // Ventana apagada: vidrio oscuro sin emisión.
-            entero("uEmision", 0);
-            colorVentana[0] = 0.08f;
-            colorVentana[1] = 0.09f;
-            colorVentana[2] = 0.11f;
-            return;
-        }
-        entero("uEmision", 1); // La ventana encendida se ve aunque no le llegue luz.
-        if (tipo == FINANCIERO) { // Oficinas: blanco frío.
-            colorVentana[0] = 0.80f;
-            colorVentana[1] = 0.90f;
-            colorVentana[2] = 1.00f;
-        } else if (tipo == COMERCIAL) { // Tiendas: neón magenta y cian alternados por piso.
-            boolean magenta = piso % 2 == 0;
-            colorVentana[0] = magenta ? 1.00f : 0.30f;
-            colorVentana[1] = magenta ? 0.30f : 0.90f;
-            colorVentana[2] = magenta ? 0.80f : 1.00f;
-        } else if (tipo == INDUSTRIAL) { // Galpones: naranja de lámpara de sodio.
-            colorVentana[0] = 1.00f;
-            colorVentana[1] = 0.55f;
-            colorVentana[2] = 0.15f;
-        } else { // Viviendas: amarillo cálido.
-            colorVentana[0] = 1.00f;
-            colorVentana[1] = 0.78f;
-            colorVentana[2] = 0.40f;
-        }
-    }
-
-    /** Dibuja las franjas blancas sobre la calle contigua al norte de la manzana. */
-    private void dibujarPasoPeatonal(float x, float z) {
-        for (int desplazamiento = -3; desplazamiento <= 3; desplazamiento++) { // Coloca siete franjas paralelas.
-            caja(x + desplazamiento, 0.045f, z - 8, 0.45f, 0.04f, 2, 0.85f, 0.87f, 0.83f); // Eleva la pintura un poco sobre el suelo.
-        }
+        material(MAT_PLANO);
     }
 
     /** Construye un semáforo decorativo que alterna rojo, verde y amarillo cada 12 segundos. */
